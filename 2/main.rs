@@ -12,13 +12,13 @@ fn parse<R: Read>(r: R) -> Spreadsheet {
         .collect()
 }
 
-fn checksum(s: Spreadsheet) -> i32 {
-    s.iter().map(|l| l.iter().max().unwrap() - l.iter().min().unwrap()).sum()
+fn row_checksum_a<T: AsRef<[i32]>>(r: T) -> i32 {
+    r.as_ref().iter().max().unwrap() - r.as_ref().iter().min().unwrap()
 }
 
-fn row_checksum_b(r: &[i32]) -> i32 {
-    for a in r.iter() {
-        for b in r.iter() {
+fn row_checksum_b<T: AsRef<[i32]>>(r: T) -> i32 {
+    for a in r.as_ref().iter() {
+        for b in r.as_ref().iter() {
             if a == b {
                 continue
             }
@@ -32,15 +32,15 @@ fn row_checksum_b(r: &[i32]) -> i32 {
     unreachable!();
 }
 
-fn checksum_b(s: Spreadsheet) -> i32 {
-    s.iter().map(|l| row_checksum_b(l) ).sum()
+fn checksum<F: FnMut(&Vec<i32>) -> i32>(f: F, s: Spreadsheet) -> i32 {
+    s.iter().map(f).sum()
 }
 
 fn main() {
     let mut buf = String::new();
     std::io::stdin().read_to_string(&mut buf).unwrap();
-    println!("{}", checksum(parse(Cursor::new(&buf))));
-    println!("{}", checksum_b(parse(Cursor::new(&buf))));
+    println!("{}", checksum(|r| row_checksum_a(r), parse(Cursor::new(&buf))));
+    println!("{}", checksum(|r| row_checksum_b(r), parse(Cursor::new(&buf))));
 }
 
 #[test]
@@ -55,7 +55,7 @@ fn parse_test() {
 #[test]
 fn checksum_test() {
     let input = vec![vec![5,1,9,5], vec![7,5,3], vec![2,4,6,8]];
-    assert_eq!(18, checksum(input));
+    assert_eq!(18, checksum(|r| row_checksum_a(r), input));
 }
 
 #[test]
