@@ -1,8 +1,7 @@
 use std::io::{BufRead,BufReader};
 use std::collections::HashMap;
 
-fn distribute(amount: i32, start: usize, mut mem: Vec<i32>) -> Vec<i32> {
-    let mut amount = amount;
+fn distribute(mut amount: i32, start: usize, mut mem: Vec<i32>) -> Vec<i32> {
     let mut pos = start;
     while amount > 0 {
         mem[pos] += 1;
@@ -12,7 +11,7 @@ fn distribute(amount: i32, start: usize, mut mem: Vec<i32>) -> Vec<i32> {
     mem
 }
 
-fn find_next_block(mem: &[i32]) -> usize {
+fn find_max_block(mem: &[i32]) -> usize {
     mem.iter()
         .enumerate()
         .rev()
@@ -26,7 +25,7 @@ fn solve(mut mem: Vec<i32>) -> (usize, usize) {
     seen.insert(mem.clone(), c);
     loop {
         c += 1;
-        let next = find_next_block(&mem);
+        let next = find_max_block(&mem);
 
         let todo = mem[next];
         mem[next] = 0;
@@ -60,8 +59,8 @@ fn distribute_test() {
 
 #[test]
 fn find_next_block_test() {
-    assert_eq!(2, find_next_block(&vec![0,2,7,0]));
-    assert_eq!(1, find_next_block(&vec![2,4,1,2]));
+    assert_eq!(2, find_max_block(&vec![0,2,7,0]));
+    assert_eq!(1, find_max_block(&vec![2,4,1,2]));
 }
 
 #[test]
