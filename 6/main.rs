@@ -39,8 +39,14 @@ fn solve(mut mem: Vec<i32>) -> (usize, usize) {
 }
 
 fn main() {
-    let lines : Result<Vec<String>, _> = BufReader::new(std::io::stdin()).lines().collect();
-    let mem : Vec<i32> = lines.unwrap().first().cloned().unwrap().split("\t").map(|s| s.parse::<i32>().unwrap()).collect();
+    let mem : Vec<i32> = BufReader::new(std::io::stdin())
+        .lines()
+        .nth(0)
+        .unwrap()
+        .unwrap()
+        .split("\t")
+        .map(|s| s.parse::<i32>().unwrap())
+        .collect();
     let s = solve(mem);
     println!("{}", s.0);
     println!("{}", s.1);
