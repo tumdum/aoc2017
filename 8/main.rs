@@ -1,27 +1,27 @@
 use std::io::{BufRead,BufReader,stdin};
 use std::collections::HashMap;
 
-fn to_rel_fn(input: &str) -> Box<Fn(i32, i32) -> bool> {
+fn to_rel_fn(input: &str) -> &'static Fn(&i32, &i32) -> bool {
     match input {
-        ">"     => Box::new(|a, b| a > b),
-        ">="    => Box::new(|a, b| a >= b),
-        "<"     => Box::new(|a, b| a < b),
-        "<="    => Box::new(|a, b| a <= b),
-        "=="    => Box::new(|a, b| a == b),
-        "!="    => Box::new(|a, b| a != b),
+        ">"     => &i32::gt,
+        ">="    => &i32::ge,
+        "<"     => &i32::lt,
+        "<="    => &i32::le,
+        "=="    => &i32::eq,
+        "!="    => &i32::ne,
         &_      => panic!("unknown rel: {}", input),
     }
 }
 
 struct Cond {
     reg: String,
-    rel: Box<Fn(i32, i32) -> bool>,
+    rel: &'static Fn(&i32, &i32) -> bool,
     val: i32,
 }
 
 impl Cond {
     fn eval(&self, regs: &mut Registers) -> bool {
-        (self.rel)(regs.get(&self.reg), self.val)
+        (self.rel)(&regs.get(&self.reg), &self.val)
     }
 }
 
@@ -57,7 +57,7 @@ fn parse(line: &str) -> Instr {
     split.next(); // if 
     let cond_reg = split.next().unwrap().to_owned();
     let rel = to_rel_fn(split.next().unwrap());
-    let val : i32 = split.next().unwrap().parse().unwrap();
+    let val = split.next().unwrap().parse().unwrap();
     let cond = Cond{reg: cond_reg, rel: rel, val: val};
     Instr{ reg, op, cond }
 }
