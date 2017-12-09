@@ -1,12 +1,10 @@
 use std::io::{Cursor,Read};
 
-#[derive(PartialEq,Debug)]
+#[derive(PartialEq,Debug,Default)]
 struct Result{groups: i32, score: i32, garbage: i32}
 
 fn count_groups<R: Read>(r: R) -> Result {
-    let mut groups = 0;
-    let mut score = 0;
-    let mut garbage = 0;
+    let mut result : Result = Default::default();
 
     let mut depth = 0;
     let mut in_garbage = false;
@@ -15,23 +13,22 @@ fn count_groups<R: Read>(r: R) -> Result {
     for c in r.bytes().map(|b| b.unwrap() as char) {
         if last == Some('!') {
             last = None;
-            if in_garbage { garbage -= 1; }
+            if in_garbage { result.garbage -= 1; }
             continue;
         } else if c != '>' && in_garbage {
             last = Some(c);
-            garbage += 1;
+            result.garbage += 1;
             continue;
         }
         match c {
-            '{' => { groups+=1; depth+=1; },
-            '<' => { in_garbage = true; },
-            '>' => { in_garbage = false; },
-            '}' => { score += depth; depth -= 1; },
-            _ => {},
+            '{'         => { result.groups +=1; depth +=1; },
+            '}'         => { result.score += depth; depth -= 1; },
+            '<' | '>'   => { in_garbage = !in_garbage; },
+            _           => {},
         }
         last = Some(c);
     }
-    Result{groups, score, garbage}
+    result
 }
 
 fn main() {
