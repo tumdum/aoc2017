@@ -47,8 +47,10 @@ fn solve_b(lengths: &[u8]) -> String {
     checksum_as_hex(&checksum)
 }
 
+const IN_SUFFIX : [u8; 5] = [17, 31, 73, 47, 23];
+
 fn parse_input_b<R: Read>(r: R) -> Vec<u8> {
-    r.bytes().map(|b| b.unwrap() as u8).chain(vec![17,31,73,47,23].into_iter()).map(|b| b as u8).collect()
+    r.bytes().map(|b| b.unwrap() as u8).chain(IN_SUFFIX.iter().cloned()).collect()
 }
 
 fn main() {
