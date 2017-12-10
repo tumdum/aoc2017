@@ -38,12 +38,10 @@ fn checksum_as_hex(input: &[u8]) -> String {
 }
 
 fn solve_b(lengths: &[u8]) -> String {
-    let mut data : Vec<_> = (0..256).map(|v| v as u8).collect();
+    let data : Vec<_> = (0..256).map(|v| v as u8).collect();
     let mut current_pos = 0;
     let mut skip_size = 0;
-    for _ in 0..64 {
-        data = solve_a(data, lengths, &mut current_pos, &mut skip_size);
-    }
+    let data = (0..64).fold(data, |d, _| solve_a(d, lengths, &mut current_pos, &mut skip_size));
     let checksum = calc_checksum(&data);
     debug_assert!(checksum.len() == 16);
     checksum_as_hex(&checksum)
