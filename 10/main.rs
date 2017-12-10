@@ -1,8 +1,8 @@
 use std::io::{Cursor,Read};
 use std::fmt::Write;
 
-fn process(mut data: Vec<u8>, pos: usize, skip: usize) -> Vec<u8> {
-    let copy : Vec<u8> = data.iter().chain(data.iter()).skip(pos).take(skip).map(|e| *e).collect();
+fn process(mut data: Vec<u8>, pos: usize, skip: u8) -> Vec<u8> {
+    let copy : Vec<u8> = data.iter().chain(data.iter()).skip(pos).take(skip as usize).map(|e| *e).collect();
     for (i, v) in copy.into_iter().rev().enumerate() {
         let real_pos = (pos + i) % data.len();
         data[real_pos] = v;
@@ -10,10 +10,10 @@ fn process(mut data: Vec<u8>, pos: usize, skip: usize) -> Vec<u8> {
     data
 }
 
-fn solve_a(mut data: Vec<u8>, lengths: &[usize], current_pos: &mut usize, skip_size: &mut usize) -> Vec<u8> {
+fn solve_a(mut data: Vec<u8>, lengths: &[u8], current_pos: &mut usize, skip_size: &mut usize) -> Vec<u8> {
     for l in lengths.into_iter() {
         data = process(data, *current_pos, *l);
-        *current_pos = (*current_pos + l + *skip_size) % data.len();
+        *current_pos = (*current_pos + (*l as usize) + *skip_size) % data.len();
         *skip_size += 1;
     }
     data
@@ -32,16 +32,13 @@ fn calc_checksum(input: &[u8]) -> Vec<u8> {
 fn checksum_as_hex(input: &[u8]) -> String {
     let mut buf = String::new();
     for b in input.iter() {
-        write!(&mut buf, "{:02x}", b);
+        write!(&mut buf, "{:02x}", b).unwrap();
     }
     buf
 }
 
-fn solve_b(lengths: &[usize]) -> String {
-    let mut data : Vec<u8> = vec![0; 256]; // (0..256).collect();
-    for i in 0..256 {
-        data[i] = i as u8;
-    }
+fn solve_b(lengths: &[u8]) -> String {
+    let mut data : Vec<_> = (0..256).map(|v| v as u8).collect();
     let mut current_pos = 0;
     let mut skip_size = 0;
     for _ in 0..64 {
@@ -52,9 +49,8 @@ fn solve_b(lengths: &[usize]) -> String {
     checksum_as_hex(&checksum)
 }
 
-
-fn parse_input_b<R: Read>(r: R) -> Vec<usize> {
-    r.bytes().map(|b| b.unwrap() as u8).chain(vec![17,31,73,47,23].into_iter()).map(|b| b as usize).collect()
+fn parse_input_b<R: Read>(r: R) -> Vec<u8> {
+    r.bytes().map(|b| b.unwrap() as u8).chain(vec![17,31,73,47,23].into_iter()).map(|b| b as u8).collect()
 }
 
 fn main() {
@@ -62,8 +58,8 @@ fn main() {
     std::io::stdin().read_to_string(&mut buf).unwrap();
     let buf = buf.trim();
 
-    let lengths : Vec<usize> = buf.split(",").map(|s| s.parse().unwrap()).collect();
-    let data : Vec<u8> = (0..256).map(|v| v as u8).collect();
+    let lengths : Vec<u8> = buf.split(",").map(|s| s.parse().unwrap()).collect();
+    let data : Vec<_> = (0..256).map(|v| v as u8).collect();
     let solution_a = solve_a(data.clone(), &lengths, &mut 0, &mut 0);
     println!("{}", solution_a[0] as usize * solution_a[1] as usize);
 
