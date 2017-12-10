@@ -54,19 +54,20 @@ fn solve_b(lengths: &[usize]) -> String {
 
 
 fn parse_input_b<R: Read>(r: R) -> Vec<usize> {
-    r.bytes().map(|b| b.unwrap() as u8).filter(|b| !(*b as char).is_whitespace()).chain(vec![17,31,73,47,23].into_iter()).map(|b| b as usize).collect()
+    r.bytes().map(|b| b.unwrap() as u8).chain(vec![17,31,73,47,23].into_iter()).map(|b| b as usize).collect()
 }
 
 fn main() {
-    let lengths = vec![157,222,1,2,177,254,0,228,159,140,249,187,255,51,76,30];
-    let mut data : Vec<u8> = vec![0; 256]; // (0..256).collect();
-    for i in 0..256 {
-        data[i] = i as u8;
-    }
-    debug_assert!(256 == data.len());
+    let mut buf = String::new();
+    std::io::stdin().read_to_string(&mut buf).unwrap();
+    let buf = buf.trim();
+
+    let lengths : Vec<usize> = buf.split(",").map(|s| s.parse().unwrap()).collect();
+    let data : Vec<u8> = (0..256).map(|v| v as u8).collect();
     let solution_a = solve_a(data.clone(), &lengths, &mut 0, &mut 0);
-    let solution_b = solve_b(&parse_input_b(std::io::stdin()));
     println!("{}", solution_a[0] as usize * solution_a[1] as usize);
+
+    let solution_b = solve_b(&parse_input_b(Cursor::new(&buf)));
     println!("{}", solution_b);
 }
 
