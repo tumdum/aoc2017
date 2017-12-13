@@ -27,8 +27,8 @@ impl Scanner {
         Scanner{range: range, pos: 0, dir: 1}
     }
 
-    fn tick(&mut self, packet_pos: i32) -> Option<i32> {
-        let range = if self.pos == packet_pos {
+    fn tick(&mut self) -> Option<i32> {
+        let range = if self.pos == 0 {
             Some(self.range)
         } else {
             None
@@ -43,37 +43,19 @@ impl Scanner {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug,Clone)]
 struct Firewall {
-    scanners: Vec<Option<Scanner>>,
-}
-
-impl Debug for Firewall {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
-        for (i, s) in self.scanners.iter().enumerate() {
-            if let &Some(ref s) = s {
-                write!(f, "{}: {:?}\n", i, s)?;
-            } else {
-                write!(f, "{}: ...\n", i)?;
-            }
-        }
-        Ok(())
-    }
+    scanners: HashMap<i32, Scanner>,
 }
 
 impl Firewall {
     fn new(m: &HashMap<i32, Scanner>) -> Self {
-        let max = (m.keys().max().unwrap()+1) as usize;
-        let mut scanners : Vec<Option<Scanner>> = vec![None; max];
-        for i in 0..max {
-            scanners[i] = m.get(&(i as i32)).cloned();
-        }
-        Firewall{scanners}
+        Firewall{scanners: m.clone()}
     }
 
     fn tick(&mut self) {
-        for (_,scanner) in &mut self.scanners.iter_mut().enumerate() {
-            scanner.as_mut().map_or(None, |s| s.tick(0));
+        for (_,scanner) in &mut self.scanners.iter_mut() {
+            scanner.tick();
         }
     }
 
@@ -87,11 +69,10 @@ impl Firewall {
         let mut severity = None;
         self.deley(deley);
 
-        for pos in 0..self.scanners.len() {
-            for (i,scanner) in &mut self.scanners.iter_mut().enumerate() {
-                let range = scanner.as_mut().map_or(None, |s| s.tick(0));
-                if let Some(v) = range {
-                    if i == pos {
+        for pos in 0..(self.scanners.keys().max().unwrap()+1) {
+            for (i,scanner) in &mut self.scanners.iter_mut() {
+                if let Some(v) = scanner.tick() {
+                    if *i == pos as i32 {
                         let score = v * pos as i32;
                         severity = Some(severity.unwrap_or(0) + score)
                     }
