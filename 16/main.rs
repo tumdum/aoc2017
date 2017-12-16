@@ -1,9 +1,14 @@
 use std::io::Read;
 
 fn spin(input: String, s: usize) -> String {
-    let len = input.len();
-    let out : Vec<u8> = input.into_bytes().iter().cycle().skip(len-s).take(len).cloned().collect();
-    unsafe { String::from_utf8_unchecked(out) }
+    let offset = 16 - s;
+    let mut buf : [u8; 16] = [0; 16];
+    let mut bytes = input.into_bytes();
+    for i in 0..16 {
+        buf[i] = bytes[(offset+i)%16];
+    }
+    bytes.copy_from_slice(&buf);
+    unsafe { String::from_utf8_unchecked(bytes) }
 }
 
 fn swap(input: String, a: usize, b: usize) -> String {
@@ -61,18 +66,18 @@ fn solve_a(start: String, moves: &[Move]) -> String {
     moves.iter().fold(start, |last, m| make_move(last, *m))
 }
 
-fn solve_b(start: String, moves: &[Move]) -> String {
-    let moves_to_make = 1000000000 % find_cycle_length(&start, moves);
+fn solve_b(start: String, after_one_move: String, moves: &[Move]) -> String {
+    let moves_to_make = 1000000000 % find_cycle_length(&start, after_one_move, moves);
     move_times(start, moves, moves_to_make)
 }
 
-fn find_cycle_length(start: &str, moves: &[Move]) -> usize {
-    let mut c = 0;
-    let mut current = start.to_owned();
+fn find_cycle_length(expected: &str, start: String, moves: &[Move]) -> usize {
+    let mut c = 1;
+    let mut current = start;
     loop {
         current = solve_a(current, moves);
         c += 1;
-        if current == start {
+        if current == expected {
             break;
         }
     }
@@ -80,29 +85,28 @@ fn find_cycle_length(start: &str, moves: &[Move]) -> usize {
 }
 
 fn main() {
-    let mut buf = String::new();
+    let mut buf = String::with_capacity(50000);
     std::io::stdin().read_to_string(&mut buf).unwrap();
     let moves : Vec<Move> = buf.trim().split(",").map(|s| s.into()).collect();
     let start = "abcdefghijklmnop";
-    println!("{}", solve_a(start.to_owned(), &moves));
-    println!("{}", solve_b(start.to_owned(), &moves));
+    let a = solve_a(start.to_owned(), &moves);
+    println!("{}", a);
+    println!("{}", solve_b(start.to_owned(), a, &moves));
 }
 
 #[test]
 fn spin_test() {
-    assert_eq!("eabcd", spin("abcde", 1));
-    assert_eq!("cdeab", spin("abcde", 3));
-    assert_eq!("abcde", spin("abcde", 5));
+    assert_eq!("pabcdefghijklmno", spin("abcdefghijklmnop".into(), 1));
 }
 
 #[test]
 fn swap_test() {
-    assert_eq!("eabdc", swap("eabcd", 3, 4));
+    assert_eq!("eabdc", swap("eabcd".into(), 3, 4));
 }
 
 #[test]
 fn swap_named_test() {
-    assert_eq!("baedc", swap_named("eabdc", 'e', 'b'));
+    assert_eq!("baedc", swap_named("eabdc".into(), 'e', 'b'));
 }
 
 #[test]
