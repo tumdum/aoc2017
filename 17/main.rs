@@ -1,22 +1,22 @@
-fn insert(b: &mut Vec<usize>, pos: usize, value: usize) -> usize {
+fn insert(b: &mut Vec<i32>, pos: usize, value: i32) -> usize {
     let pos = pos % b.len() + 1;
     b.insert(pos, value);
     pos
 }
 
-fn solve_a(iterations: usize, step: usize) -> usize {
+fn solve_a(iterations: i32, step: usize) -> i32 {
     let mut buf = vec![0];
     let mut pos = 0;
 
     for _ in 0..iterations {
-        let len = buf.len();
+        let len = buf.len() as i32;
         pos = insert(&mut buf, pos + step, len);
     }
 
     buf[(pos+1)%buf.len()]
 }
 
-fn solve_b(iterations: usize, step: usize) -> usize {
+fn solve_b(iterations: i32, step: i32) -> i32 {
     let mut pos = 0;
     let mut counter = 1;
     let mut last = 0;
