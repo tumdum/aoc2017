@@ -68,6 +68,8 @@ struct State<'a> {
     pc: i64,
     id: i64,
 
+    last_played: i64,
+    last_recovered: i64,
     instructions: &'a [Instr],
     sends: i32
 }
@@ -78,6 +80,8 @@ impl<'a> State<'a> {
             regs: Regs::new(), 
             pc: 0, 
             id: id, 
+            last_played: 0,
+            last_recovered: 0,
             instructions: instructions, 
             sends: 0};
         s.write('p', id);
@@ -95,6 +99,65 @@ impl<'a> State<'a> {
         self.regs.insert(reg, val);
     }
 
+    fn set(&mut self, r: char, v: &Val) {
+        let v = self.read(v);
+        self.write(r, v);
+    }
+
+    fn add(&mut self, r: char, v: &Val) {
+        let v = self.read(&Val::Reg(r)) + self.read(v);
+        self.write(r, v);
+    }
+
+    fn mul(&mut self, r: char, v: &Val) {
+        let y = self.read(v);
+        let x = self.read(&Val::Reg(r));
+        let v = x * y;
+        self.write(r, v);
+    }
+
+    fn modulo(&mut self, r: char, v: &Val) {
+        let y = self.read(v);
+        let x = self.read(&Val::Reg(r));
+        let v = x % y;
+        self.write(r, v);
+    }
+
+    fn jgz(&mut self, x: &Val, y: &Val) -> bool {
+        if self.read(x) > 0 {
+            self.pc += self.read(y);
+            return true;
+        }
+        return false;
+    }
+
+    fn run_sound(&mut self) -> bool {
+        let instr = &self.instructions[self.pc as usize];
+
+        let mut jumped = false;
+        match instr {
+            &Instr::Set(r, ref v) => self.set(r, v),
+            &Instr::Add(r, ref v) => self.add(r, v),
+            &Instr::Mul(r, ref v) => self.mul(r, v),
+            &Instr::Mod(r, ref v) => self.modulo(r, v),
+            &Instr::Snd(ref v) => self.last_played = self.read(v),
+            &Instr::Jgz(ref x, ref y) => jumped = self.jgz(x, y),
+            &Instr::Rcv(r) => {
+                if self.read(&Val::Reg(r)) != 0 {
+                    self.last_recovered = self.last_played;
+                    return false;
+                }
+            }
+        }
+        if !jumped {
+            self.pc += 1;
+        }
+        if self.pc < 0 || self.pc >= self.instructions.len() as i64 {
+            return false;
+        }
+        return true;
+    }
+
     fn run_one(&mut self, own: &mut VecDeque<i64>, other: &mut VecDeque<i64>) -> bool {
         if self.pc < 0 || self.pc >= self.instructions.len() as i64 {
             return false;
@@ -104,30 +167,15 @@ impl<'a> State<'a> {
 
         let mut jumped = false;
         match instr {
+            &Instr::Set(r, ref v) => self.set(r, v),
+            &Instr::Add(r, ref v) => self.add(r, v),
+            &Instr::Mul(r, ref v) => self.mul(r, v),
+            &Instr::Mod(r, ref v) => self.modulo(r, v),
+            &Instr::Jgz(ref x, ref y) => jumped = self.jgz(x, y),
             &Instr::Snd(ref v) => {
                 let v = self.read(v);
                 other.push_back(v);
                 self.sends += 1;
-            },
-            &Instr::Set(r, ref v) => {
-                let v = self.read(v);
-                self.write(r, v);
-            },
-            &Instr::Add(r, ref v) => {
-                let v = self.read(&Val::Reg(r)) + self.read(v);
-                self.write(r, v);
-            },
-            &Instr::Mul(r, ref v) => {
-                let y = self.read(v);
-                let x = self.read(&Val::Reg(r));
-                let v = x * y;
-                self.write(r, v);
-            },
-            &Instr::Mod(r, ref v) => {
-                let y = self.read(v);
-                let x = self.read(&Val::Reg(r));
-                let v = x % y;
-                self.write(r, v);
             },
             &Instr::Rcv(r) => {
                 if own.is_empty() {
@@ -137,12 +185,6 @@ impl<'a> State<'a> {
                     self.write(r, v);
                 }
             }
-            &Instr::Jgz(ref x, ref y) => {
-                if self.read(x) > 0 {
-                    self.pc += self.read(y);
-                    jumped = true;
-                }
-            },
         }
         if !jumped {
             self.pc += 1;
@@ -161,10 +203,13 @@ fn run(p: &mut State, mut own: &mut VecDeque<i64>, mut other: &mut VecDeque<i64>
     executed_instructions
 }
 
+fn solve_a(instructions: &[Instr]) {
+    let mut state = State::new(&instructions, 0);
+    while state.run_sound() { }
+    println!("{}", state.last_recovered);
+}
 
-fn main() {
-    let instructions : Vec<_> = 
-        BufReader::new(std::io::stdin()).lines().map(|s| parse(&s.unwrap())).collect();
+fn solve_b(instructions: &[Instr]) {
     let mut p0 = State::new(&instructions, 0);
     let mut p0_queue = VecDeque::new();
     let mut p1 = State::new(&instructions, 1);
@@ -178,4 +223,11 @@ fn main() {
         }
     }
     println!("{}", p1.sends);
+}
+
+fn main() {
+    let instructions : Vec<_> = 
+        BufReader::new(std::io::stdin()).lines().map(|s| parse(&s.unwrap())).collect();
+    solve_a(&instructions);
+    solve_b(&instructions);
 }
