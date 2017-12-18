@@ -1,5 +1,5 @@
 use std::io::{BufRead,BufReader};
-use std::collections::HashMap;
+use std::collections::{HashMap,VecDeque};
 
 type Regs = HashMap<char, i64>;
 
@@ -25,7 +25,7 @@ enum Instr {
     Add(char, Val),
     Mul(char, Val),
     Mod(char, Val),
-    Rcv(Val),
+    Rcv(char),
     Jgz(Val, Val),
 }
 
@@ -52,7 +52,7 @@ impl<'a> From<&'a str> for Instr {
             let third = split.next().unwrap();
             return Instr::Mod(second.chars().next().unwrap(), third.into());
         } else if first.starts_with("rcv") {
-            return Instr::Rcv(split.next().unwrap().into());
+            return Instr::Rcv(split.next().unwrap().chars().next().unwrap());
         } else if first.starts_with("jgz") {
             let second = split.next().unwrap();
             let third = split.next().unwrap();
@@ -66,6 +66,7 @@ impl<'a> From<&'a str> for Instr {
 struct State<'a> {
     regs: Regs,
     pc: i64,
+    id: i64,
     last_played: i64,
     last_recovered: i64,
 
@@ -73,8 +74,8 @@ struct State<'a> {
 }
 
 impl<'a> State<'a> {
-    fn new(instructions: &'a [Instr]) -> Self {
-        State{regs: Regs::new(), pc: 0, last_played: 0, last_recovered: 0, instructions: instructions}
+    fn new(instructions: &'a [Instr], pc: i64) -> Self {
+        State{regs: Regs::new(), pc: pc, id: pc, last_played: 0, last_recovered: 0, instructions: instructions}
     }
 
     fn read(&mut self, val: &Val) -> i64 {
@@ -88,12 +89,14 @@ impl<'a> State<'a> {
         self.regs.insert(reg, val);
     }
 
-    fn run_one(&mut self) -> bool {
+    fn run_one(&mut self, own: &mut VecDeque<i64>, other: &mut VecDeque<i64>) -> End {
         let instr = &self.instructions[self.pc as usize];
 
-        let mut jumped = false;
+        let mut should_move = true;
         match instr {
-            &Instr::Snd(ref v) => self.last_played = self.read(v),
+            &Instr::Snd(ref v) => {
+                other.push_back(self.read(v));
+            },
             &Instr::Set(r, ref v) => {
                 let v = self.read(v);
                 self.write(r, v);
@@ -114,53 +117,63 @@ impl<'a> State<'a> {
                 let v = x % y;
                 self.write(r, v);
             },
-            &Instr::Rcv(ref v) => {
-                if self.read(v) != 0 {
-                    self.last_recovered = self.last_played;
-                    return false;
+            &Instr::Rcv(r) => {
+                if own.is_empty() {
+                    should_move = false;
+                    return End::Wait;
+                } else {
+                    let v = own.pop_front().unwrap();
+                    self.write(r, v);
                 }
             }
             &Instr::Jgz(ref x, ref y) => {
                 if self.read(x) > 0 {
                     self.pc += self.read(y);
-                    jumped = true;
+                    should_move = false;
                 }
             },
         }
-        if !jumped {
+        if should_move {
             self.pc += 1;
         }
         if self.pc < 0 || self.pc >= self.instructions.len() as i64 {
-            return false;
+            return End::Natural;
         }
-        return true;
+        return End::Continue;
     }
-
-    fn exec(&mut self) {
-        loop {
-            if !self.run_one() {
-                break;
-            }
-        }
-    }
-}
-
-fn run(instructions: &[Instr]) -> State {
-    let mut state = State::new(instructions);
-    state.exec();
-    state
 }
 
 fn parse(s: &str) -> Instr {
     s.into()
 }
 
+#[derive(PartialEq)]
+enum End { Continue, Wait, Natural, }
+
+fn run(p: &mut State, mut own: &mut VecDeque<i64>, mut other: &mut VecDeque<i64>) -> End {
+    loop {
+        let end = p.run_one(&mut own, &mut other);
+        if end != End::Continue {
+            return end;
+        }
+    }
+}
+
+
 fn main() {
     let instructions : Vec<Instr> = 
         BufReader::new(std::io::stdin()).lines().map(|s| parse(&s.unwrap())).collect();
+    let mut p0 = State::new(&instructions, 0);
+    let mut p0_queue = VecDeque::new();
+    let mut p1 = State::new(&instructions, 1);
+    let mut p1_queue = VecDeque::new();
 
-    let state = run(&instructions);
-    println!("{}", state.last_recovered);
+    let mut p0_pc = p0.pc;
+    let mut p1_pc = p1.pc;
+    loop {
+        let end0 = run(&mut p0, &mut p0_queue, &mut p1_queue);
+        let end1 = run(&mut p1, &mut p1_queue, &mut p0_queue);
+    }
 }
 
 #[test]
