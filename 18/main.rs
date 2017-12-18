@@ -67,15 +67,21 @@ struct State<'a> {
     regs: Regs,
     pc: i64,
     id: i64,
-    last_played: i64,
-    last_recovered: i64,
 
     instructions: &'a [Instr],
+    sends: i32
 }
 
 impl<'a> State<'a> {
-    fn new(instructions: &'a [Instr], pc: i64) -> Self {
-        State{regs: Regs::new(), pc: pc, id: pc, last_played: 0, last_recovered: 0, instructions: instructions}
+    fn new(instructions: &'a [Instr], id: i64) -> Self {
+        let mut s = State{
+            regs: Regs::new(), 
+            pc: 0, 
+            id: id, 
+            instructions: instructions, 
+            sends: 0};
+        s.write('p', id);
+        s
     }
 
     fn read(&mut self, val: &Val) -> i64 {
@@ -89,13 +95,19 @@ impl<'a> State<'a> {
         self.regs.insert(reg, val);
     }
 
-    fn run_one(&mut self, own: &mut VecDeque<i64>, other: &mut VecDeque<i64>) -> End {
+    fn run_one(&mut self, own: &mut VecDeque<i64>, other: &mut VecDeque<i64>) -> bool {
+        if self.pc < 0 || self.pc >= self.instructions.len() as i64 {
+            return false;
+        }
+
         let instr = &self.instructions[self.pc as usize];
 
-        let mut should_move = true;
+        let mut jumped = false;
         match instr {
             &Instr::Snd(ref v) => {
-                other.push_back(self.read(v));
+                let v = self.read(v);
+                other.push_back(v);
+                self.sends += 1;
             },
             &Instr::Set(r, ref v) => {
                 let v = self.read(v);
@@ -119,8 +131,7 @@ impl<'a> State<'a> {
             },
             &Instr::Rcv(r) => {
                 if own.is_empty() {
-                    should_move = false;
-                    return End::Wait;
+                    return false;
                 } else {
                     let v = own.pop_front().unwrap();
                     self.write(r, v);
@@ -129,17 +140,14 @@ impl<'a> State<'a> {
             &Instr::Jgz(ref x, ref y) => {
                 if self.read(x) > 0 {
                     self.pc += self.read(y);
-                    should_move = false;
+                    jumped = true;
                 }
             },
         }
-        if should_move {
+        if !jumped {
             self.pc += 1;
         }
-        if self.pc < 0 || self.pc >= self.instructions.len() as i64 {
-            return End::Natural;
-        }
-        return End::Continue;
+        return true;
     }
 }
 
@@ -147,45 +155,27 @@ fn parse(s: &str) -> Instr {
     s.into()
 }
 
-#[derive(PartialEq)]
-enum End { Continue, Wait, Natural, }
-
-fn run(p: &mut State, mut own: &mut VecDeque<i64>, mut other: &mut VecDeque<i64>) -> End {
-    loop {
-        let end = p.run_one(&mut own, &mut other);
-        if end != End::Continue {
-            return end;
-        }
-    }
+fn run(p: &mut State, mut own: &mut VecDeque<i64>, mut other: &mut VecDeque<i64>) -> i64 {
+    let mut executed_instructions = 0;
+    while p.run_one(&mut own, &mut other) { executed_instructions += 1; }
+    executed_instructions
 }
 
 
 fn main() {
-    let instructions : Vec<Instr> = 
+    let instructions : Vec<_> = 
         BufReader::new(std::io::stdin()).lines().map(|s| parse(&s.unwrap())).collect();
     let mut p0 = State::new(&instructions, 0);
     let mut p0_queue = VecDeque::new();
     let mut p1 = State::new(&instructions, 1);
     let mut p1_queue = VecDeque::new();
 
-    let mut p0_pc = p0.pc;
-    let mut p1_pc = p1.pc;
     loop {
-        let end0 = run(&mut p0, &mut p0_queue, &mut p1_queue);
-        let end1 = run(&mut p1, &mut p1_queue, &mut p0_queue);
+        let ic0 = run(&mut p0, &mut p0_queue, &mut p1_queue);
+        let ic1 = run(&mut p1, &mut p1_queue, &mut p0_queue);
+        if ic0 == 0 && ic1 == 0 {
+            break;
+        }
     }
-}
-
-#[test]
-fn test_run() {
-    use Instr::*;
-    use Val::*;
-    let input = vec![Set('a',Lit(1)), Add('a',Lit(2)), 
-        Mul('a', Reg('a')), Mod('a', Lit(5)), Snd(Reg('a')),
-        Set('a', Lit(0)), Rcv(Reg('a')), Jgz(Reg('a'), Lit(-1)),
-        Set('a', Lit(1)), Jgz(Reg('a'), Lit(-2))];
-
-    let state = run(&input);
-    println!("{:?}", state);
-    assert_eq!(state.last_recovered, 4);
+    println!("{}", p1.sends);
 }
