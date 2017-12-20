@@ -1,3 +1,5 @@
+#![feature(conservative_impl_trait)]
+
 use std::io::{BufRead,BufReader};
 use std::collections::HashMap;
 use std::ops::Add;
@@ -56,9 +58,10 @@ struct Particle {
 }
 
 impl Particle {
-    fn tick(&mut self) {
-        self.v = self.v + self.a;
-        self.p = self.p + self.v;
+    fn tick(self) -> Particle {
+        let v = self.v + self.a;
+        let p = self.p + v;
+        Particle{a: self.a, v: v, p: p}
     }
 }
 
@@ -84,20 +87,18 @@ fn solve_a(particles: &[Particle]) -> Option<usize> {
         .map(|t| t.0)
 }
 
-fn remove_coliding(particles: Vec<Particle>) -> Vec<Particle> {
+fn remove_coliding(particles: Vec<Particle>) -> impl std::iter::Iterator<Item=Particle> {
     let mut positions = HashMap::new();
     for p in &particles {
         *positions.entry(p.p.clone()).or_insert(0) += 1;
     }
     particles.into_iter()
-        .filter(|p| positions.get(&p.p) == Some(&1))
-        .collect()
+        .filter(move |p| positions.get(&p.p) == Some(&1))
 }
 
 fn solve_b(mut particles: Vec<Particle>) -> usize {
     for _ in 0..10000 {
-        particles = remove_coliding(particles);
-        particles.iter_mut().for_each(Particle::tick);
+        particles = remove_coliding(particles).map(Particle::tick).collect();
     }
     particles.len()
 }
