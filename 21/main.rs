@@ -4,8 +4,9 @@ use std::collections::HashSet;
 type Grid = Vec<Vec<bool>>;
 
 fn parse_grid(s: &str) -> Grid {
-    let rows = s.split('/');
-    rows.map(|s| s.chars().map(|c| c != '.').collect()).collect()
+    s.split('/')
+        .map(|s| s.chars().map(|c| c != '.').collect())
+        .collect()
 }
 
 fn rotate(g: &Grid) -> Grid {
@@ -65,19 +66,10 @@ impl Rule {
         Rule{inputs, output}
     }
 
-    fn replace(&self, g: &Grid) -> Option<Grid> {
-        /*
-         * this is twice as slow
+    fn replace<'a, 'b>(&'a self, g: &'b Grid) -> Option<&'a Grid> {
         self.inputs.iter()
             .find(|r| r == &g)
-            .and(Some(self.output.clone()))
-            */
-        for r in &self.inputs {
-            if *r == *g {
-                return Some(self.output.clone());
-            }
-        }
-        None
+            .and(Some(&self.output))
     }
 }
 
@@ -123,12 +115,12 @@ fn split(g: &Grid) -> Vec<Vec<Grid>> {
     ret
 }
 
-fn merge(input: Vec<Vec<Grid>>) -> Grid {
-    let mut output = vec![];
+fn merge(input: Vec<Vec<&Grid>>) -> Grid {
+    let mut output = Vec::with_capacity(input.len() * 3);
     for row in input {
         let size = row[0].len();
         for y in 0..size {
-            let mut out_row = vec![];
+            let mut out_row = Vec::with_capacity(row.len() * size);
             for m in &row {
                 for x in 0..size {
                     out_row.push(m[y][x])
@@ -140,20 +132,23 @@ fn merge(input: Vec<Vec<Grid>>) -> Grid {
     output
 }
 
-fn apply(g: &Grid, rules: &[Rule]) -> Grid {
+fn apply<'a, 'b>(g: &'a Grid, rules: &'b [Rule]) -> &'b Grid {
     rules.iter().map(|r| r.replace(g))
         .skip_while(|g| g.is_none())
         .next().unwrap().unwrap()
 }
 
 fn round(g: &Grid, rules: &[Rule]) -> Grid {
-    let mut splited = split(g); 
+    let splited = split(g); 
+    let mut refs = vec![];
     for y in 0..splited.len() {
+        let mut row = Vec::with_capacity(splited.len());
         for x in 0..splited.len() {
-            splited[y][x] = apply(&splited[y][x], rules);
+            row.push(apply(&splited[y][x], rules));
         }
+        refs.push(row);
     }
-    merge(splited)
+    merge(refs)
 }
 
 fn print(g: &Grid) {
