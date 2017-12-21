@@ -129,8 +129,8 @@ fn split(g: &Grid) -> Vec<Vec<Grid>> {
     ret
 }
 
-fn merge(input: Vec<Vec<&Grid>>) -> Grid {
-    let mut output = Vec::with_capacity(input.len() * 3);
+fn merge<'a, I: Iterator<Item=Vec<&'a Grid>>>(input: I) -> Grid {
+    let mut output = Vec::with_capacity(input.size_hint().1.unwrap_or(0) * 3);
     for row in input {
         let size = row[0].len();
         for y in 0..size {
@@ -149,8 +149,7 @@ fn merge(input: Vec<Vec<&Grid>>) -> Grid {
 fn round(g: &Grid, rs: &RuleSet) -> Grid {
     merge(split(g)
             .into_iter()
-            .map(|row| row.into_iter().map(|ref e| rs.get(e)).collect())
-            .collect())
+            .map(|row| row.into_iter().map(|ref e| rs.get(e)).collect()))
 }
 
 fn print(g: &Grid) {
