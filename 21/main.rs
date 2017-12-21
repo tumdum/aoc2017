@@ -1,5 +1,5 @@
 use std::io::{BufRead,BufReader};
-use std::collections::HashSet;
+use std::collections::{HashSet,HashMap};
 
 type Grid = Vec<Vec<bool>>;
 
@@ -65,12 +65,6 @@ impl Rule {
         inputs.extend(tmp.into_iter());
         Rule{inputs, output}
     }
-
-    fn replace<'a, 'b>(&'a self, g: &'b Grid) -> Option<&'a Grid> {
-        self.inputs.iter()
-            .find(|r| r == &g)
-            .and(Some(&self.output))
-    }
 }
 
 fn parse_rule(s: &str) -> (Grid, Grid) {
@@ -78,6 +72,26 @@ fn parse_rule(s: &str) -> (Grid, Grid) {
     let left = top.next().unwrap();
     let right = top.next().unwrap();
     (parse_grid(&left), parse_grid(&right))
+}
+
+struct RuleSet {
+    mapping: HashMap<Grid, Grid>,
+}
+
+impl RuleSet {
+    fn new(rules: Vec<Rule>) -> RuleSet {
+        let mut ret = RuleSet{mapping: HashMap::new()};
+        for rule in rules {
+            for input in rule.inputs {
+                ret.mapping.insert(input, rule.output.clone());
+            }
+        }
+        ret
+    }
+
+    fn get(&self, input: &Grid) -> &Grid {
+        self.mapping.get(input).unwrap()
+    }
 }
 
 fn extract(g: &Grid, x_start: usize, y_start: usize, size: usize) -> Grid {
@@ -132,23 +146,11 @@ fn merge(input: Vec<Vec<&Grid>>) -> Grid {
     output
 }
 
-fn apply<'a, 'b>(g: &'a Grid, rules: &'b [Rule]) -> &'b Grid {
-    rules.iter().map(|r| r.replace(g))
-        .skip_while(|g| g.is_none())
-        .next().unwrap().unwrap()
-}
-
-fn round(g: &Grid, rules: &[Rule]) -> Grid {
-    let splited = split(g); 
-    let mut refs = vec![];
-    for y in 0..splited.len() {
-        let mut row = Vec::with_capacity(splited.len());
-        for x in 0..splited.len() {
-            row.push(apply(&splited[y][x], rules));
-        }
-        refs.push(row);
-    }
-    merge(refs)
+fn round(g: &Grid, rs: &RuleSet) -> Grid {
+    merge(split(g)
+            .into_iter()
+            .map(|row| row.into_iter().map(|ref e| rs.get(e)).collect())
+            .collect())
 }
 
 fn print(g: &Grid) {
@@ -168,17 +170,19 @@ fn main() {
         .map(|p| Rule::new(p.0, p.1))
         .collect();
 
+    let rule_set = RuleSet::new(rules);
+
     let start = parse_grid(".#./..#/###");
     let mut a = start.clone();
     for _ in 0..5 {
-        a = round(&a, &rules);
+        a = round(&a, &rule_set);
     }
     print(&a);
     println!("{}", count(&a));
 
     let mut b = start.clone();
     for _ in 0..18 {
-        b = round(&b, &rules);
+        b = round(&b, &rule_set);
     }
     println!("{}", count(&b));
 }
