@@ -179,8 +179,8 @@ fn main() {
     print(&a);
     println!("{}", count(&a));
 
-    let mut b = start.clone();
-    for _ in 0..18 {
+    let mut b = a;
+    for _ in 0..(18-5) {
         b = round(&b, &rule_set);
     }
     println!("{}", count(&b));
