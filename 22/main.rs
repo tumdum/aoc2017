@@ -60,72 +60,72 @@ impl Carrier {
 }
 
 #[derive(Clone,PartialEq)]
-enum Flag { Clean, Weakened, Infected, Flagged }
+enum State { Clean, Weakened, Infected, Flagged }
 
-impl Flag {
-    fn next(&self) -> Flag {
+impl State {
+    fn next(&self) -> State {
         match self {
-            &Flag::Clean => Flag::Weakened,
-            &Flag::Weakened => Flag::Infected,
-            &Flag::Infected => Flag::Flagged,
-            &Flag::Flagged => Flag::Clean,
+            &State::Clean => State::Weakened,
+            &State::Weakened => State::Infected,
+            &State::Infected => State::Flagged,
+            &State::Flagged => State::Clean,
         }
     }
 }
 
 #[derive(Clone)]
 struct Grid {
-    states: HashMap<Pos, Flag>,
+    states: HashMap<Pos, State>,
     infections: usize,
 }
 
 impl Grid {
     fn new(s: HashSet<Pos>) -> Grid {
-        // Grid{infected: s, infections: 0}
         let mut m = HashMap::new();
         for p in s {
-            m.insert(p, Flag::Infected);
+            m.insert(p, State::Infected);
         }
         Grid{states: m, infections: 0}
     }
 
-    fn get_flag(&self, pos: &Pos) -> Flag {
-        self.states.get(pos).cloned().unwrap_or(Flag::Clean)
+    fn get_state(&self, pos: &Pos) -> State {
+        self.states.get(pos).cloned().unwrap_or(State::Clean)
     }
 
     fn touch(&mut self, pos: &Pos) {
-        let current_flag = self.get_flag(pos);
-        let next_flag = current_flag.next();
-        if next_flag == Flag::Infected {
+        let current_state = self.get_state(pos);
+        let next_state = current_state.next();
+        if next_state == State::Infected {
             self.infections += 1;
         }
-        self.states.insert(pos.clone(), next_flag);
+        self.states.insert(pos.clone(), next_state);
     }
 
-    fn burst(&mut self, mut c: Carrier) -> Carrier {
-        let current_flag = self.get_flag(&c.pos);
-        match current_flag {
-            Flag::Clean => c.rotate(Rotation::Left),
-            Flag::Weakened => {},
-            Flag::Infected => c.rotate(Rotation::Right),
-            Flag::Flagged => c.reverse(),
+
+    fn burst_a(&mut self, mut c: Carrier) -> Carrier {
+        let current_infected = self.get_state(&c.pos) != State::Clean;
+        if current_infected {
+            c.rotate(Rotation::Right);
+            self.states.remove(&c.pos);
+        } else {
+            c.rotate(Rotation::Left);
+            self.states.insert(c.pos.clone(), State::Infected);
+            self.infections += 1;
+        }
+        c.move_forward();
+        c
+    }
+    fn burst_b(&mut self, mut c: Carrier) -> Carrier {
+        let current_state = self.get_state(&c.pos);
+        match current_state {
+            State::Clean => c.rotate(Rotation::Left),
+            State::Weakened => {},
+            State::Infected => c.rotate(Rotation::Right),
+            State::Flagged => c.reverse(),
         }
 
         self.touch(&c.pos);
         c.move_forward();
-
-        /*
-        let current_infected = self.infected.contains(&c.pos);
-        if current_infected {
-            c.rotate(Rotation::Right);
-            self.infected.remove(&c.pos);
-        } else {
-            c.rotate(Rotation::Left);
-            self.infected.insert(c.pos);
-            self.infections += 1;
-        }
-        c.move_forward();
-        */
         c
     }
 }
@@ -147,17 +147,26 @@ fn parse<R: Read>(r: R) -> (HashSet<Pos>, Pos) {
     (s, center)
 }
 
-fn solve_a(mut g: Grid, mut c: Carrier, steps: usize) {
+fn solve_a(mut g: Grid, mut c: Carrier, steps: usize) -> usize {
     for _ in 0..steps {
-        c = g.burst(c);
+        c = g.burst_a(c);
     }
-    println!("{:10} => {}", steps, g.infections);
+    g.infections
+}
+
+fn solve_b(mut g: Grid, mut c: Carrier, steps: usize) -> usize {
+    for _ in 0..steps {
+        c = g.burst_b(c);
+    }
+    g.infections
 }
 
 fn main() {
     let (infected, start) = parse(std::io::stdin());
     let grid = Grid::new(infected);
     let carrier = Carrier{pos: start, orientation: Orientation::Up};
-    solve_a(grid.clone(), carrier.clone(), 100);
-    solve_a(grid.clone(), carrier.clone(), 10000000);
+    solve_a(grid.clone(), carrier.clone(), 10000);
+    println!("a: {:10} => {}", 10000, solve_a(grid.clone(), carrier.clone(), 10000));
+    solve_b(grid.clone(), carrier.clone(), 10000000);
+    println!("b: {:10} => {}", 10000000, solve_b(grid, carrier, 10000000));
 }

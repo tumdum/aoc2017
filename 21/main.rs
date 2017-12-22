@@ -89,7 +89,7 @@ impl RuleSet {
         ret
     }
 
-    fn get(&self, input: &Grid) -> &Grid {
+    fn transform(&self, input: &Grid) -> &Grid {
         self.mapping.get(input).unwrap()
     }
 }
@@ -146,11 +146,7 @@ fn merge<'a, I: Iterator<Item=Vec<&'a Grid>>>(input: I) -> Grid {
     output
 }
 
-fn round(g: &Grid, rs: &RuleSet) -> Grid {
-    merge(split(g)
-            .into_iter()
-            .map(|row| row.into_iter().map(|ref e| rs.get(e)).collect()))
-}
+fn round(g: &Grid, rs: &RuleSet) -> Grid { merge(split(g).into_iter().map(|row| row.into_iter().map(|ref e| rs.transform(e)).collect())) }
 
 fn print(g: &Grid) {
     g.iter()
