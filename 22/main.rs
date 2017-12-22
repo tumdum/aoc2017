@@ -1,7 +1,7 @@
 use std::io::{BufRead,BufReader,Read};
 use std::collections::{HashMap,HashSet};
 
-type Pos = (i64, i64);
+type Pos = (i32, i32);
 
 enum Rotation { Left, Right }
 
@@ -135,12 +135,12 @@ fn parse<R: Read>(r: R) -> (HashSet<Pos>, Pos) {
     let g : Vec<Vec<bool>> = 
         r.lines().map(|l| l.unwrap().chars().map(|c| c == '#').collect()).collect();
     let mut s = HashSet::new();
-    let center = ((g[0].len()/2) as i64, (g.len()/2) as i64);
+    let center = ((g[0].len()/2) as i32, (g.len()/2) as i32);
     for y in 0..g.len() {
         let row_len = g[y].len();
         for x in 0..row_len {
             if g[y][x] {
-                s.insert((x as i64, y as i64));
+                s.insert((x as i32, y as i32));
             }
         }
     }
