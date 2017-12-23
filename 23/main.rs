@@ -1,5 +1,5 @@
 use std::io::{BufRead,BufReader};
-use std::collections::{HashMap,VecDeque};
+use std::collections::HashMap;
 
 type Regs = HashMap<char, i64>;
 
@@ -65,16 +65,14 @@ struct State<'a> {
 
 impl<'a> State<'a> {
     fn new(instructions: &'a [Instr], id: i64) -> Self {
-        let mut s = State{
+        State{
             regs: Regs::new(), 
             pc: 0, 
             id: id, 
             last_played: 0,
             last_recovered: 0,
             instructions: instructions, 
-            muls: 0};
-        s.write('p', id);
-        s
+            muls: 0}
     }
 
     fn read(&mut self, val: &Val) -> i64 {
@@ -144,8 +142,21 @@ fn solve_a(instructions: &[Instr]) {
     println!("{}", state.muls);
 }
 
+fn solve_b() {
+    let start : i64 = 65 * 100 + 100000;
+    let end = start + 17000 + 17;
+    let sqrt = |n: i64| (n as f64).sqrt() as i64;
+    let not_prime = |n: i64| (2..sqrt(n)+1).any(|v| n%v==0);
+    let p : usize = (start..end)
+        .filter(|n| (n-start)%17==0)
+        .filter(|n| not_prime(*n))
+        .count();
+    println!("{}", p);
+}
+
 fn main() {
     let instructions : Vec<_> = 
         BufReader::new(std::io::stdin()).lines().map(|s| parse(&s.unwrap())).collect();
     solve_a(&instructions);
+    solve_b();
 }
