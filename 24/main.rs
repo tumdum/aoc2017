@@ -53,7 +53,7 @@ fn generate_suffixes(prefix: &[Component], components: &HashSet<Component>) -> V
     bridges
 }
 
-fn generate_all(components: &HashSet<Component>) -> Vec<Bridge> {
+fn generate_all(components: HashSet<Component>) -> Vec<Bridge> {
     let mut bridges = vec![];
     for start in components.iter().filter(|c| c.x == 0 || c.y == 0) {
         let real_start = if start.x == 0 { start.clone() } else { swap(start.clone()) };
@@ -78,15 +78,13 @@ fn bridge_cmp(l: &Bridge, r: &Bridge) -> std::cmp::Ordering {
     }
 }
 
-fn solve_a(input: &HashSet<Component>) {
-    let bridges = generate_all(&input);
-    let best = bridges.iter().max_by_key(|b| bridge_score(&b)).unwrap();
+fn solve_a(all_bridges: &[Bridge]) {
+    let best = all_bridges.iter().max_by_key(|b| bridge_score(&b)).unwrap();
     println!("score {} for {:?}", bridge_score(&best), best);
 }
 
-fn solve_b(input: &HashSet<Component>) {
-    let bridges = generate_all(&input);
-    let best = bridges.iter().max_by(|l,r| bridge_cmp(&l,&r)).unwrap();
+fn solve_b(all_bridges: &[Bridge]) {
+    let best = all_bridges.iter().max_by(|l,r| bridge_cmp(&l,&r)).unwrap();
     println!("score {} for {:?}", bridge_score(&best), best);
 }
 
@@ -95,6 +93,7 @@ fn main() {
         .lines()
         .map(|l| parse_component(&l.unwrap()))
         .collect();
-    solve_a(&components);
-    solve_b(&components);
+    let all_bridges = generate_all(components);
+    solve_a(&all_bridges);
+    solve_b(&all_bridges);
 }
