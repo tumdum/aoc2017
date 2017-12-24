@@ -33,23 +33,23 @@ fn matching(l: &Component, r: &Component) -> Option<Component> {
 }
 
 #[derive(Debug)]
-struct Bridge{score: usize, len: usize}
+struct Bridge{strength: usize, len: usize}
 
 impl Bridge {
     fn new(components: Vec<Component>) -> Self {
-        let score = components.iter().map(|c| c.x + c.y).sum();
+        let strength = components.iter().map(|c| c.x + c.y).sum();
         let len = components.len();
-        Bridge{score: score, len: len}
+        Bridge{strength, len}
     }
 
     fn len(&self) -> usize { self.len }
 
-    fn score(&self) -> usize { self.score }
+    fn strength(&self) -> usize { self.strength }
 }
 
 impl std::hash::Hash for Bridge {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.score().hash(state);
+        self.strength().hash(state);
         self.len().hash(state);
     }
 }
@@ -58,7 +58,7 @@ impl Eq for Bridge { }
 
 impl PartialEq for Bridge {
     fn eq(&self, other: &Bridge) -> bool {
-        self.score() == other.score() && self.len() == other.len()
+        self.strength() == other.strength() && self.len() == other.len()
     }
 }
 
@@ -96,18 +96,18 @@ fn bridge_cmp(l: &Bridge, r: &Bridge) -> std::cmp::Ordering {
     } else if l.len() > r.len() {
         return std::cmp::Ordering::Greater;
     } else {
-        return l.score().cmp(&r.score());
+        return l.strength().cmp(&r.strength());
     }
 }
 
 fn solve_a(all_bridges: &HashSet<Bridge>) {
-    let best = all_bridges.iter().max_by_key(|b| b.score()).unwrap();
-    println!("score {} for {:?}", best.score(), best);
+    let best = all_bridges.iter().max_by_key(|b| b.strength()).unwrap();
+    println!("strength {} for {:?}", best.strength(), best);
 }
 
 fn solve_b(all_bridges: &HashSet<Bridge>) {
     let best = all_bridges.iter().max_by(|l,r| bridge_cmp(&l,&r)).unwrap();
-    println!("score {} for {:?}", best.score(), best);
+    println!("strength {} for {:?}", best.strength(), best);
 }
 
 fn main() {
