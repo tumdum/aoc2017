@@ -1,40 +1,35 @@
-use std::collections::HashSet;
-
 #[derive(Debug)]
 enum State { A, B, C, D, E, F }
 
 #[derive(Debug)]
 struct Machine {
-    tape: HashSet<i64>,
+    tape: Vec<bool>,
     state: State,
-    position: i64,
-    checksum_steps: i64,
+    position: usize,
+    checksum_steps: usize,
 }
 
 impl Machine {
     fn new() -> Self {
+        let steps = 12683008;
         Machine{
-            tape: HashSet::new(),
+            tape: vec![false; (steps+1)*2],
             state: State::A,
-            position: 0,
-            checksum_steps: 12683008,
+            position: steps+1,
+            checksum_steps: steps,
         }
     }
 
     fn checksum(&self) -> usize {
-        self.tape.len()
+        self.tape.iter().filter(|b| **b).count()
     }
 
     fn current_value(&mut self) -> bool {
-        self.tape.contains(&self.position)
+        self.tape[self.position]
     }
 
     fn write(&mut self, val: bool) {
-        if val {
-            self.tape.insert(self.position);
-        } else {
-            self.tape.remove(&self.position);
-        }
+        self.tape[self.position] = val;
     }
 
     fn move_left(&mut self) {
