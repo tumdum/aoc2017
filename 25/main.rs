@@ -1,11 +1,11 @@
-use std::collections::HashMap;
+use std::collections::HashSet;
 
 #[derive(Debug)]
 enum State { A, B, C, D, E, F }
 
 #[derive(Debug)]
 struct Machine {
-    tape: HashMap<i64, bool>,
+    tape: HashSet<i64>,
     state: State,
     position: i64,
     checksum_steps: i64,
@@ -14,7 +14,7 @@ struct Machine {
 impl Machine {
     fn new() -> Self {
         Machine{
-            tape: HashMap::new(),
+            tape: HashSet::new(),
             state: State::A,
             position: 0,
             checksum_steps: 12683008,
@@ -22,15 +22,19 @@ impl Machine {
     }
 
     fn checksum(&self) -> usize {
-        self.tape.values().map(|b| if *b { 1 } else { 0 }).sum()
+        self.tape.len()
     }
 
     fn current_value(&mut self) -> bool {
-        *self.tape.entry(self.position).or_insert(false)
+        self.tape.contains(&self.position)
     }
 
     fn write(&mut self, val: bool) {
-        self.tape.insert(self.position, val);
+        if val {
+            self.tape.insert(self.position);
+        } else {
+            self.tape.remove(&self.position);
+        }
     }
 
     fn move_left(&mut self) {
